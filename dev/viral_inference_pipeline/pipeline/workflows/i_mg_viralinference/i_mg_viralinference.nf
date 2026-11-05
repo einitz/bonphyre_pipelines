@@ -84,26 +84,26 @@ publish @ ${params.outdir}
     // Read mapping
 
 
-    // // -----------------------------------------------------------------------------------------------------------------------------
-    // // 4. Pipeline metric collection
-    // // -----------------------------------------------------------------------------------------------------------------------------
-    // // Combine every subworkflow's per-sample metrics into one wide row per sample
-    // // and write it out as a single benchmark/QC summary table.
-    // all_metrics_ch = s_i_mg_readqc.out.metrics
-    // .join(s_i_mg_genomadviralfilter.out.metrics, remainder: true)
-    // .map { sampleid, readqc_row, viral_row ->
-    //     def readqc = readqc_row ?: (['NA'] * 3).join('\t')
-    //     def viral  = viral_row  ?: (['NA'] * 10).join('\t')
-    //     "${sampleid}\t${readqc}\t${viral}"
-    // }
+    // -----------------------------------------------------------------------------------------------------------------------------
+    // 4. Pipeline metric collection
+    // -----------------------------------------------------------------------------------------------------------------------------
+    // Combine every subworkflow's per-sample metrics into one wide row per sample
+    // and write it out as a single benchmark/QC summary table.
+    all_metrics_ch = s_i_mg_readqc.out.metrics
+    		   .join(s_i_mg_genomadviralfilter.out.metrics, remainder: true)
+    		   .map { sampleid, readqc_row, viral_row ->
+         	   	def readqc = readqc_row ?: (['NA'] * 3).join('\t')
+         	   	def viral  = viral_row  ?: (['NA'] * 10).join('\t')
+         	   	"${sampleid}\t${readqc}\t${viral}"
+     		   }
 
-    // all_metrics_ch.collectFile(
-    //     name: 'metrics_summary.tsv',
-    //     storeDir: "${params.outdir}/pipeline_info",
-    //     newLine: true,
-    //     sort:     true,
-    //     seed: "sampleid\traw_reads\tclean_reads\tpct_reads_retained\tn_contigs\tn_viral\tmean_completeness\ttotal_viral_genes\ttotal_host_genes\tmean_coverage\tn_passed_filter\tn_viral_extracted\tn_provirus_extracted\tfilter_extract_match"
-    // )
+     all_metrics_ch.collectFile(
+         name: 'metrics_summary.tsv',
+         storeDir: "${params.outdir}/pipeline_info",
+         newLine: true,
+         sort:     true,
+         seed: "sampleid\traw_reads\tclean_reads\tpct_reads_retained\tn_contigs\tn_viral\tmean_completeness\ttotal_viral_genes\ttotal_host_genes\tmean_coverage\tn_passed_filter\tn_viral_extracted\tn_provirus_extracted\tfilter_extract_match"
+     )
 
 }
 
