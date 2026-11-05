@@ -24,7 +24,7 @@ include { s_i_mg_genomadviralfilter } from '../../subworkflows/s_i_mg_genomadvir
 
 // Processes
 include { megahit } from '../../../nextflow_process_library/modules/megahit/megahit.nf'
-// include { mmseqs2 } from '../../../nextflow_process_library/modules/mmseqs2/mmseqs2.nf'
+include { mmseqs_easy_cluster } from '../../../nextflow_process_library/modules/mmseqs2/mmseqs2.nf'
 
 
 workflow {
@@ -79,7 +79,22 @@ publish @ ${params.outdir}
     // Run genomad viral inference + filtering (includes its own coverage/QC-metric steps)
     s_i_mg_genomadviralfilter(megahit.out.contigs, genomad_db_ch, checkv_db_ch, s_i_mg_readqc.out.reads)
 
-    // Clustering
+    // Clustering: concatenate filtered viral + proviral seqs from all samples into one catalog, cluster with mmseqs2
+        // Channel prep: headers are already "<sampleid>_viral_N"/"<sampleid>_provirus_N", so seq IDs are unique across samples.
+        // collectFile waits for ALL samples; sorting by file name keeps the catalog order reproducible.
+    viral_catalog_ch = s_i_mg_genomadviralfilter.out.viral_fasta
+        .mix(s_i_mg_genomadviralfilter.out.provirus_fasta)
+        .map { sampleid, fasta -> fasta }
+        .collectFile(name: 'viral_catalog.fna', storeDir: "${params.outdir}/viral_catalog", sort: { it.name })
+    mmseqs_easy_cluster(viral_catalog_ch)
+
+        // Report catalog size before vs. after clustering (number of representative sequences = number of clusters)
+    viral_catalog_ch
+        .map { catalog -> catalog.countFasta() }
+        .subscribe { n -> log.info "Viral catalog: ${n} sequences before clustering" }
+    mmseqs_easy_cluster.out.representative_seqs
+        .map { rep_seqs -> rep_seqs.countFasta() }
+        .subscribe { n -> log.info "Viral catalog: ${n} representative sequences after clustering" }
 
     // Read mapping
 
